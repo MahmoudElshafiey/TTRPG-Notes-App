@@ -20,7 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.dndnotes.data.model.Note
+import com.example.dndnotes.data.model.NoteSummary
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -37,7 +37,7 @@ fun NoteListScreen(
 
     val notes by viewModel.notes.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
-    var noteToDelete by remember { mutableStateOf<Note?>(null) }
+    var noteToDelete by remember { mutableStateOf<NoteSummary?>(null) }
 
     Scaffold(
         topBar = {
@@ -61,7 +61,7 @@ fun NoteListScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(notes) { note ->
+                items(notes, key = { it.id }) { note ->
                     NoteItem(
                         note = note,
                         onClick = { onNoteClick(note.id) },
@@ -89,7 +89,7 @@ fun NoteListScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            viewModel.deleteNote(note)
+                            viewModel.deleteNote(note.id)
                             noteToDelete = null
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -140,9 +140,9 @@ fun AddNoteDialog(
 
 @Composable
 fun NoteItem(
-    note: Note,
+    note: NoteSummary,
     onClick: () -> Unit,
-    onDelete: (Note) -> Unit
+    onDelete: (NoteSummary) -> Unit
 ) {
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -185,7 +185,7 @@ fun NoteItem(
                     )
                     
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (!note.drawing.isNullOrEmpty()) {
+                        if (note.hasDrawing) {
                             Icon(
                                 imageVector = Icons.Default.Brush,
                                 contentDescription = "Has Drawing",

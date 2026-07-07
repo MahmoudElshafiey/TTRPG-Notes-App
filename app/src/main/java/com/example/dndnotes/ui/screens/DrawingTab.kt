@@ -1,22 +1,32 @@
 package com.example.dndnotes.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.dndnotes.data.model.Note
 import com.example.dndnotes.ui.components.DrawingCanvas
 import com.example.dndnotes.ui.components.SerializablePath
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 
 @Composable
 fun DrawingTab(note: Note, onUpdate: (Note) -> Unit) {
+    val scope = rememberCoroutineScope()
     var strokeColor by remember { mutableStateOf(Color.Red) }
     var strokeWidth by remember { mutableStateOf(5f) }
     var undoTrigger by remember { mutableStateOf(0) }
@@ -48,16 +58,25 @@ fun DrawingTab(note: Note, onUpdate: (Note) -> Unit) {
                 Icon(Icons.Default.Clear, contentDescription = "Clear")
             }
             
-            // Basic color picker
-            colors.forEach { color ->
-                Surface(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .padding(4.dp),
-                    color = color,
-                    shape = MaterialTheme.shapes.small,
-                    onClick = { strokeColor = color }
-                ) { }
+            // Scrollable color picker
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp)
+            ) {
+                items(colors) { color ->
+                    val isSelected = strokeColor == color
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .background(color)
+                            .then(
+                                if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, MaterialTheme.shapes.small)
+                                else Modifier
+                            )
+                            .clickable { strokeColor = color }
+                    )
+                }
             }
         }
 
@@ -65,8 +84,12 @@ fun DrawingTab(note: Note, onUpdate: (Note) -> Unit) {
             modifier = Modifier.weight(1f),
             initialPaths = initialPaths,
             onDrawingChanged = { paths ->
-                val jsonString = Json.encodeToString(paths)
-                onUpdate(note.copy(drawing = jsonString))
+                scope.launch {
+                    val jsonString = withContext(Dispatchers.Default) {
+                        Json.encodeToString(paths)
+                    }
+                    onUpdate(note.copy(drawing = jsonString))
+                }
             },
             strokeColor = strokeColor,
             strokeWidth = strokeWidth,

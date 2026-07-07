@@ -84,7 +84,7 @@ fun CampaignScreen(
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                items(campaigns) { campaign ->
+                items(campaigns, key = { it.id }) { campaign ->
                     CampaignItem(
                         campaign = campaign,
                         onClick = { onCampaignClick(campaign.id) },

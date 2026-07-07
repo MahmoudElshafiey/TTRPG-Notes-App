@@ -6,6 +6,7 @@ import com.example.dndnotes.data.local.NoteDao
 import com.example.dndnotes.data.model.Campaign
 import com.example.dndnotes.data.model.Category
 import com.example.dndnotes.data.model.Note
+import com.example.dndnotes.data.model.NoteSummary
 import com.example.dndnotes.data.model.ImageAttachment
 import com.example.dndnotes.data.model.ConsumableItem
 import kotlinx.coroutines.flow.Flow
@@ -34,11 +35,14 @@ class DndRepository(
 
     // Notes
     fun getNotesByCategory(categoryId: Long) = noteDao.getNotesByCategory(categoryId)
+    fun getNoteSummariesByCategory(categoryId: Long) = noteDao.getNoteSummariesByCategory(categoryId)
     suspend fun getAllNotesRaw() = noteDao.getAllNotes()
     fun getNoteById(noteId: Long) = noteDao.getNoteById(noteId)
+    suspend fun getNoteByIdRaw(noteId: Long) = noteDao.getNoteByIdRaw(noteId)
     suspend fun insertNote(note: Note) = noteDao.insertNote(note)
     suspend fun updateNote(note: Note) = noteDao.updateNote(note)
     suspend fun deleteNote(note: Note) = noteDao.deleteNote(note)
+    suspend fun deleteNoteById(noteId: Long) = noteDao.deleteNoteById(noteId)
     fun searchNotes(query: String) = noteDao.searchNotes(query)
 
     // Images

@@ -78,7 +78,7 @@ fun CategoryScreen(
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                items(rootCategories) { category ->
+                items(rootCategories, key = { it.id }) { category ->
                     CategoryTreeItem(
                         category = category,
                         allCategories = categories,

@@ -2,14 +2,21 @@ package com.example.dndnotes.data.local
 
 import androidx.room.*
 import com.example.dndnotes.data.model.Note
+import com.example.dndnotes.data.model.NoteSummary
 import com.example.dndnotes.data.model.ImageAttachment
 import com.example.dndnotes.data.model.ConsumableItem
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface NoteDao {
+    @Query("SELECT id, categoryId, title, body, created, (drawing IS NOT NULL AND drawing != '') as hasDrawing FROM notes WHERE categoryId = :categoryId ORDER BY created DESC")
+    fun getNoteSummariesByCategory(categoryId: Long): Flow<List<NoteSummary>>
+
     @Query("SELECT * FROM notes WHERE categoryId = :categoryId ORDER BY created DESC")
     fun getNotesByCategory(categoryId: Long): Flow<List<Note>>
+
+    @Query("SELECT * FROM notes WHERE id = :noteId")
+    suspend fun getNoteByIdRaw(noteId: Long): Note?
 
     @Query("SELECT * FROM notes WHERE id = :noteId")
     fun getNoteById(noteId: Long): Flow<Note?>
@@ -22,6 +29,9 @@ interface NoteDao {
 
     @Delete
     suspend fun deleteNote(note: Note)
+
+    @Query("DELETE FROM notes WHERE id = :noteId")
+    suspend fun deleteNoteById(noteId: Long)
 
     @Query("SELECT * FROM images WHERE noteId = :noteId ORDER BY orderIndex ASC")
     fun getImagesForNote(noteId: Long): Flow<List<ImageAttachment>>

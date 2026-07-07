@@ -11,6 +11,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 
 import kotlinx.serialization.Serializable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 @Serializable
 data class SerializablePoint(val x: Float, val y: Float)
@@ -62,13 +68,25 @@ fun DrawingCanvas(
     var currentPoints = remember { mutableStateListOf<SerializablePoint>() }
     var redrawTrigger by remember { mutableStateOf(0) }
 
+    // Debounced Save
+    LaunchedEffect(Unit) {
+        snapshotFlow { serializablePaths.toList() }
+            .collectLatest { paths ->
+                if (paths.isNotEmpty()) {
+                    delay(1000)
+                    onDrawingChanged(paths)
+                } else if (clearTrigger > 0) {
+                     onDrawingChanged(emptyList())
+                }
+            }
+    }
+
     // Handle Undo
     LaunchedEffect(undoTrigger) {
         if (paths.isNotEmpty() && undoTrigger > 0) {
             paths.removeAt(paths.size - 1)
             serializablePaths.removeAt(serializablePaths.size - 1)
             redrawTrigger++
-            onDrawingChanged(serializablePaths.toList())
         }
     }
 
@@ -78,9 +96,11 @@ fun DrawingCanvas(
             paths.clear()
             serializablePaths.clear()
             redrawTrigger++
-            onDrawingChanged(emptyList())
         }
     }
+
+    val currentStrokeColor by rememberUpdatedState(strokeColor)
+    val currentStrokeWidth by rememberUpdatedState(strokeWidth)
 
     Canvas(
         modifier = modifier
@@ -101,14 +121,13 @@ fun DrawingCanvas(
                     },
                     onDragEnd = {
                         currentPath?.let {
-                            paths.add(PathState(it, strokeColor, strokeWidth))
+                            paths.add(PathState(it, currentStrokeColor, currentStrokeWidth))
                             val sPath = SerializablePath(
                                 points = currentPoints.toList(),
-                                color = strokeColor.toArgb(),
-                                strokeWidth = strokeWidth
+                                color = currentStrokeColor.toArgb(),
+                                strokeWidth = currentStrokeWidth
                             )
                             serializablePaths.add(sPath)
-                            onDrawingChanged(serializablePaths.toList())
                         }
                         currentPath = null
                         redrawTrigger++

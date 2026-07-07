@@ -37,8 +37,8 @@ fun NoteEditorScreen(
     }
 
     val note by viewModel.currentNote.collectAsState()
-    var selectedTab by remember { mutableStateOf(0) }
-    val tabs = listOf("Write", "Images", "Drawing", "Sheet", "Consumables")
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val tabs = remember { listOf("Write", "Images", "Drawing", "Sheet", "Consumables") }
 
     Scaffold(
         topBar = {
@@ -88,7 +88,12 @@ fun WriteTab(note: Note, onUpdate: (Note) -> Unit) {
         }
     }
 
-    Column(modifier = Modifier.padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding()
+            .padding(16.dp)
+    ) {
         TextField(
             value = title,
             onValueChange = { title = it },
