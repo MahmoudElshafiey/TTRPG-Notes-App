@@ -40,6 +40,7 @@ fun NoteListScreen(
     var noteToDelete by remember { mutableStateOf<NoteSummary?>(null) }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(title = { Text("Notes") })
         },
@@ -179,6 +180,7 @@ fun NoteItem(
                         text = note.title,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
+                        color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)

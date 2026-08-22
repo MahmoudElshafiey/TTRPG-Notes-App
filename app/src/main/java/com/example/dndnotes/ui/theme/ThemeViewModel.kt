@@ -12,9 +12,18 @@ class ThemeViewModel(private val themePreferences: ThemePreferences) : ViewModel
     val currentTheme: StateFlow<DndTheme> = themePreferences.themeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DndTheme.DARK_PARCHMENT)
 
+    val backgroundImageUri: StateFlow<String?> = themePreferences.backgroundImageFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     fun setTheme(theme: DndTheme) {
         viewModelScope.launch {
             themePreferences.saveTheme(theme)
+        }
+    }
+
+    fun setBackgroundImage(uri: String?) {
+        viewModelScope.launch {
+            themePreferences.saveBackgroundImage(uri)
         }
     }
 }

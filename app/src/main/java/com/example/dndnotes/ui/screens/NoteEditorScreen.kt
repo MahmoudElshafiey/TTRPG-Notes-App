@@ -13,15 +13,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.asImageBitmap
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
-import java.io.InputStream
 import com.example.dndnotes.data.model.ImageAttachment
 import com.example.dndnotes.data.model.Note
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +46,7 @@ fun NoteEditorScreen(
     val tabs = remember { listOf("Write", "Images", "Drawing", "Sheet", "Consumables") }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(note?.title ?: "Edit Note") }
@@ -60,11 +66,11 @@ fun NoteEditorScreen(
                 }
 
                 Box(modifier = Modifier.weight(1f)) {
-                    when (selectedTab) {
-                        0 -> WriteTab(currentNote, onUpdate = { viewModel.updateNote(it) })
+                     when (selectedTab) {
+                        0 -> WriteTab(currentNote, onUpdate = { viewModel.updateTitleBody(it.title, it.body) })
                         1 -> ImagesTab(currentNote, viewModel = imagesViewModel)
-                        2 -> DrawingTab(currentNote, onUpdate = { viewModel.updateNote(it) })
-                        3 -> SheetTab(currentNote, onUpdate = { viewModel.updateNote(it) })
+                        2 -> DrawingTab(currentNote, onUpdate = { viewModel.updateDrawing(it.drawing) })
+                        3 -> SheetTab(currentNote, onUpdate = { viewModel.updateSheet(it.sheet) })
                         4 -> ConsumablesTab(currentNote, viewModel = consumablesViewModel)
                     }
                 }
@@ -117,17 +123,43 @@ fun WriteTab(note: Note, onUpdate: (Note) -> Unit) {
 fun ImagesTab(note: Note, viewModel: ImagesViewModel) {
     val images by viewModel.images.collectAsState()
     val context = LocalContext.current
-    
+    val scope = rememberCoroutineScope()
+
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: android.net.Uri? ->
         uri?.let {
-            val inputStream: InputStream? = context.contentResolver.openInputStream(it)
-            val bytes = inputStream?.readBytes()
-            if (bytes != null) {
-                val base64 = Base64.encodeToString(bytes, Base64.DEFAULT)
-                val fileName = it.lastPathSegment ?: "image_${System.currentTimeMillis()}"
-                viewModel.addImage(note.id, fileName, base64, context.contentResolver.getType(it) ?: "image/*")
+            scope.launch {
+                val base64 = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(it)?.use { stream ->
+                        val original = BitmapFactory.decodeStream(stream)
+                        if (original != null) {
+                            val maxDim = 1280
+                            val scale = (maxOf(original.width, original.height).toFloat() / maxDim).coerceAtLeast(1f)
+                            val scaled = if (scale > 1f) {
+                                Bitmap.createScaledBitmap(
+                                    original,
+                                    (original.width / scale).toInt(),
+                                    (original.height / scale).toInt(),
+                                    true
+                                )
+                            } else {
+                                original
+                            }
+                            val out = java.io.ByteArrayOutputStream()
+                            scaled.compress(Bitmap.CompressFormat.JPEG, 80, out)
+                            if (scaled != original) scaled.recycle()
+                            original.recycle()
+                            Base64.encodeToString(out.toByteArray(), Base64.DEFAULT)
+                        } else {
+                            null
+                        }
+                    }
+                }
+                if (base64 != null) {
+                    val fileName = it.lastPathSegment ?: "image_${System.currentTimeMillis()}"
+                    viewModel.addImage(note.id, fileName, base64, "image/jpeg")
+                }
             }
         }
     }
@@ -156,9 +188,21 @@ fun ImagesTab(note: Note, viewModel: ImagesViewModel) {
 
 @Composable
 fun ImageItem(image: ImageAttachment, onDelete: () -> Unit) {
-    val bitmap = remember(image.data) {
-        val bytes = Base64.decode(image.data, Base64.DEFAULT)
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    var bitmap by remember(image.data) { mutableStateOf<android.graphics.Bitmap?>(null) }
+
+    LaunchedEffect(image.data) {
+        bitmap = withContext(Dispatchers.IO) {
+            val bytes = Base64.decode(image.data, Base64.DEFAULT)
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, this)
+                val target = 1024
+                inSampleSize = (maxOf(outWidth, outHeight).toFloat() / target).coerceAtLeast(1f)
+                    .toInt().coerceAtLeast(1)
+                inJustDecodeBounds = false
+            }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+        }
     }
 
     Card(
@@ -169,13 +213,20 @@ fun ImageItem(image: ImageAttachment, onDelete: () -> Unit) {
             Box {
                 if (bitmap != null) {
                     androidx.compose.foundation.Image(
-                        bitmap = bitmap.asImageBitmap(),
+                        bitmap = bitmap!!.asImageBitmap(),
                         contentDescription = image.name,
                         modifier = Modifier.fillMaxWidth().height(200.dp),
                         contentScale = ContentScale.Crop
                     )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        contentAlignment = androidx.compose.ui.Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
-                
+
                 IconButton(
                     onClick = onDelete,
                     modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(8.dp),

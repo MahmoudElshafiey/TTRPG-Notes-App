@@ -11,12 +11,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 
 import kotlinx.serialization.Serializable
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 @Serializable
 data class SerializablePoint(val x: Float, val y: Float)
@@ -68,18 +62,10 @@ fun DrawingCanvas(
     var currentPoints = remember { mutableStateListOf<SerializablePoint>() }
     var redrawTrigger by remember { mutableStateOf(0) }
 
-    // Debounced Save
-    LaunchedEffect(Unit) {
-        snapshotFlow { serializablePaths.toList() }
-            .collectLatest { paths ->
-                if (paths.isNotEmpty()) {
-                    delay(1000)
-                    onDrawingChanged(paths)
-                } else if (clearTrigger > 0) {
-                     onDrawingChanged(emptyList())
-                }
-            }
-    }
+    // Save immediately whenever the drawing changes, so a stroke is persisted
+    // even if the user leaves the screen right after drawing (no cancellable debounce).
+    // The initial load (LaunchedEffect(initialPaths)) populates serializablePaths
+    // without calling onDrawingChanged, so we don't re-write what we just read.
 
     // Handle Undo
     LaunchedEffect(undoTrigger) {
@@ -87,6 +73,7 @@ fun DrawingCanvas(
             paths.removeAt(paths.size - 1)
             serializablePaths.removeAt(serializablePaths.size - 1)
             redrawTrigger++
+            onDrawingChanged(serializablePaths.toList())
         }
     }
 
@@ -96,6 +83,7 @@ fun DrawingCanvas(
             paths.clear()
             serializablePaths.clear()
             redrawTrigger++
+            onDrawingChanged(serializablePaths.toList())
         }
     }
 
@@ -128,6 +116,7 @@ fun DrawingCanvas(
                                 strokeWidth = currentStrokeWidth
                             )
                             serializablePaths.add(sPath)
+                            onDrawingChanged(serializablePaths.toList())
                         }
                         currentPath = null
                         redrawTrigger++

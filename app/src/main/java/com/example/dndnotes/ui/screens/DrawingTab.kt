@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.example.dndnotes.data.model.Note
 import com.example.dndnotes.ui.components.DrawingCanvas
@@ -33,16 +34,20 @@ fun DrawingTab(note: Note, onUpdate: (Note) -> Unit) {
     var clearTrigger by remember { mutableStateOf(0) }
 
     val colors = listOf(Color.Red, Color.Green, Color.Blue, Color.Yellow, Color.Cyan, Color.Magenta, Color.White, Color.Black)
-    
-    val initialPaths = remember(note.id) {
-        try {
-            if (!note.drawing.isNullOrEmpty()) {
-                Json.decodeFromString<List<SerializablePath>>(note.drawing)
-            } else {
+
+    var initialPaths by remember(note.id) { mutableStateOf<List<SerializablePath>?>(null) }
+
+    LaunchedEffect(note.id) {
+        initialPaths = withContext(Dispatchers.Default) {
+            try {
+                if (!note.drawing.isNullOrEmpty()) {
+                    Json.decodeFromString<List<SerializablePath>>(note.drawing)
+                } else {
+                    emptyList()
+                }
+            } catch (e: Exception) {
                 emptyList()
             }
-        } catch (e: Exception) {
-            emptyList()
         }
     }
 
@@ -80,21 +85,27 @@ fun DrawingTab(note: Note, onUpdate: (Note) -> Unit) {
             }
         }
 
-        DrawingCanvas(
-            modifier = Modifier.weight(1f),
-            initialPaths = initialPaths,
-            onDrawingChanged = { paths ->
-                scope.launch {
-                    val jsonString = withContext(Dispatchers.Default) {
-                        Json.encodeToString(paths)
+        if (initialPaths == null) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            DrawingCanvas(
+                modifier = Modifier.weight(1f),
+                initialPaths = initialPaths!!,
+                onDrawingChanged = { paths ->
+                    scope.launch {
+                        val jsonString = withContext(Dispatchers.Default) {
+                            Json.encodeToString(paths)
+                        }
+                        onUpdate(note.copy(drawing = jsonString))
                     }
-                    onUpdate(note.copy(drawing = jsonString))
-                }
-            },
-            strokeColor = strokeColor,
-            strokeWidth = strokeWidth,
-            undoTrigger = undoTrigger,
-            clearTrigger = clearTrigger
-        )
+                },
+                strokeColor = strokeColor,
+                strokeWidth = strokeWidth,
+                undoTrigger = undoTrigger,
+                clearTrigger = clearTrigger
+            )
+        }
     }
 }

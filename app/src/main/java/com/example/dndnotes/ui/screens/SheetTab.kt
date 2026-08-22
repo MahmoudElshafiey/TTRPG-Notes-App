@@ -24,16 +24,25 @@ import kotlinx.serialization.json.Json
 
 @Composable
 fun SheetTab(note: Note, onUpdate: (Note) -> Unit) {
-    val sheetData = remember(note.id) {
-        try {
-            Json.decodeFromString<List<List<String>>>(note.sheet)
-        } catch (e: Exception) {
-            listOf(listOf(""))
-        }
-    }.toMutableStateList()
+    val sheetData = remember(note.id) { mutableStateListOf<List<String>>() }
+    var sheetLoaded by remember(note.id) { mutableStateOf(false) }
 
-    // Debounced Save
     LaunchedEffect(note.id) {
+        val parsed = withContext(Dispatchers.Default) {
+            try {
+                Json.decodeFromString<List<List<String>>>(note.sheet)
+            } catch (e: Exception) {
+                listOf(listOf(""))
+            }
+        }
+        sheetData.clear()
+        sheetData.addAll(parsed)
+        sheetLoaded = true
+    }
+
+    // Debounced Save (runs only after the sheet has loaded)
+    LaunchedEffect(note.id, sheetLoaded) {
+        if (!sheetLoaded) return@LaunchedEffect
         snapshotFlow { sheetData.toList() }
             .collectLatest { data ->
                 delay(1000)
@@ -47,6 +56,14 @@ fun SheetTab(note: Note, onUpdate: (Note) -> Unit) {
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        if (!sheetLoaded) {
+            Box(
+                modifier = Modifier.fillMaxSize().weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
         Column(
             modifier = Modifier.padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -142,6 +159,7 @@ fun SheetTab(note: Note, onUpdate: (Note) -> Unit) {
                     }
                 }
             }
+        }
         }
     }
 }

@@ -12,6 +12,7 @@ private val Context.dataStore by preferencesDataStore(name = "settings")
 
 class ThemePreferences(private val context: Context) {
     private val themeKey = stringPreferencesKey("app_theme")
+    private val backgroundImageKey = stringPreferencesKey("background_image_uri")
 
     val themeFlow: Flow<DndTheme> = context.dataStore.data
         .map { preferences ->
@@ -23,9 +24,22 @@ class ThemePreferences(private val context: Context) {
             }
         }
 
+    val backgroundImageFlow: Flow<String?> = context.dataStore.data
+        .map { preferences -> preferences[backgroundImageKey] }
+
     suspend fun saveTheme(theme: DndTheme) {
         context.dataStore.edit { preferences ->
             preferences[themeKey] = theme.name
+        }
+    }
+
+    suspend fun saveBackgroundImage(uri: String?) {
+        context.dataStore.edit { preferences ->
+            if (uri == null) {
+                preferences.remove(backgroundImageKey)
+            } else {
+                preferences[backgroundImageKey] = uri
+            }
         }
     }
 }

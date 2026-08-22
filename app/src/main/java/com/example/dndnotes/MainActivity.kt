@@ -6,13 +6,17 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.navigation.compose.rememberNavController
 import com.example.dndnotes.ui.ViewModelFactory
@@ -23,12 +27,10 @@ import com.example.dndnotes.ui.screens.CategoryViewModel
 import com.example.dndnotes.ui.screens.ConsumablesViewModel
 import com.example.dndnotes.ui.screens.ImagesViewModel
 import com.example.dndnotes.ui.screens.NoteViewModel
+import com.example.dndnotes.ui.components.BackgroundImage
 import com.example.dndnotes.ui.theme.DndNotesTheme
 import com.example.dndnotes.ui.theme.DndTheme
 import com.example.dndnotes.ui.theme.ThemeViewModel
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.graphics.Color
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 
 class MainActivity : ComponentActivity() {
@@ -58,6 +60,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val currentTheme by themeViewModel.currentTheme.collectAsState()
+            val backgroundUri by themeViewModel.backgroundImageUri.collectAsState()
 
             DisposableEffect(currentTheme) {
                 enableEdgeToEdge(
@@ -68,29 +71,41 @@ class MainActivity : ComponentActivity() {
             }
 
             DndNotesTheme(theme = currentTheme) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val navController = rememberNavController()
-                    DndNavGraph(
-                        navController = navController,
-                        campaignViewModel = campaignViewModel,
-                        categoryViewModel = categoryViewModel,
-                        noteViewModel = noteViewModel,
-                        imagesViewModel = imagesViewModel,
-                        consumablesViewModel = consumablesViewModel,
-                        themeViewModel = themeViewModel,
-                        importExportViewModel = importExportViewModel,
-                        onCreateDocument = { fileName, callback ->
-                            onFileSelected = callback
-                            createDocumentLauncher.launch(fileName)
-                        },
-                        onOpenDocument = { callback ->
-                            onFileSelected = callback
-                            openDocumentLauncher.launch(arrayOf("application/json"))
-                        }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    BackgroundImage(
+                        uriString = backgroundUri,
+                        modifier = Modifier.fillMaxSize()
                     )
+                    val scrimAlpha = if (backgroundUri != null) 0.55f else 1f
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background.copy(alpha = scrimAlpha))
+                    )
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = Color.Transparent
+                    ) {
+                        val navController = rememberNavController()
+                        DndNavGraph(
+                            navController = navController,
+                            campaignViewModel = campaignViewModel,
+                            categoryViewModel = categoryViewModel,
+                            noteViewModel = noteViewModel,
+                            imagesViewModel = imagesViewModel,
+                            consumablesViewModel = consumablesViewModel,
+                            themeViewModel = themeViewModel,
+                            importExportViewModel = importExportViewModel,
+                            onCreateDocument = { fileName, callback ->
+                                onFileSelected = callback
+                                createDocumentLauncher.launch(fileName)
+                            },
+                            onOpenDocument = { callback ->
+                                onFileSelected = callback
+                                openDocumentLauncher.launch(arrayOf("application/json"))
+                            }
+                        )
+                    }
                 }
             }
         }

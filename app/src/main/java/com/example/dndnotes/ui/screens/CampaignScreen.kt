@@ -12,10 +12,12 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -30,7 +32,8 @@ fun CampaignScreen(
     importExportViewModel: ImportExportViewModel,
     onCreateDocument: (String, (Uri?) -> Unit) -> Unit,
     onOpenDocument: ((Uri?) -> Unit) -> Unit,
-    onCampaignClick: (Long) -> Unit
+    onCampaignClick: (Long) -> Unit,
+    onSettingsClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val campaigns by viewModel.allCampaigns.collectAsState()
@@ -39,6 +42,7 @@ fun CampaignScreen(
     var campaignToEdit by remember { mutableStateOf<Campaign?>(null) }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("Select Campaign") },
@@ -64,6 +68,9 @@ fun CampaignScreen(
                         }
                     }) {
                         Icon(Icons.Default.FileDownload, contentDescription = "Create Backup")
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 }
             )
@@ -213,6 +220,7 @@ fun CampaignItem(
             Text(
                 text = campaign.name,
                 style = MaterialTheme.typography.titleLarge,
+                color = Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

@@ -36,6 +36,9 @@ fun DndNavGraph(
                 onOpenDocument = onOpenDocument,
                 onCampaignClick = { campaignId ->
                     navController.navigate(Screen.CategoryList.createRoute(campaignId))
+                },
+                onSettingsClick = {
+                    navController.navigate(Screen.Settings.route)
                 }
             )
         }
@@ -85,7 +88,10 @@ fun DndNavGraph(
             // TODO: SearchScreen()
         }
         composable(Screen.Settings.route) {
-            // TODO: SettingsScreen()
+            SettingsScreen(
+                themeViewModel = themeViewModel,
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

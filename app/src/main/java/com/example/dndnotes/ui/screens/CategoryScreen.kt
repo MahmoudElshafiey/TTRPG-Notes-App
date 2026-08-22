@@ -47,6 +47,7 @@ fun CategoryScreen(
     var categoryToEdit by remember { mutableStateOf<Category?>(null) }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text("D&D Notes") },
@@ -320,6 +321,7 @@ fun CategoryTreeItem(
             Text(
                 text = category.name,
                 style = MaterialTheme.typography.bodyLarge,
+                color = Color.White,
                 modifier = Modifier.weight(1f)
             )
 

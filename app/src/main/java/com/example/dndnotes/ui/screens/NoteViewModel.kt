@@ -38,6 +38,27 @@ class NoteViewModel(private val repository: DndRepository) : ViewModel() {
         }
     }
 
+    fun updateDrawing(drawing: String?) {
+        persistMerge { it.copy(drawing = drawing) }
+    }
+
+    fun updateSheet(sheet: String) {
+        persistMerge { it.copy(sheet = sheet) }
+    }
+
+    fun updateTitleBody(title: String, body: String) {
+        persistMerge { it.copy(title = title, body = body) }
+    }
+
+    private fun persistMerge(transform: (Note) -> Note) {
+        val base = _currentNote.value ?: return
+        val updated = transform(base)
+        viewModelScope.launch {
+            repository.updateNote(updated)
+            _currentNote.value = updated
+        }
+    }
+
     fun deleteNote(noteId: Long) {
         viewModelScope.launch {
             repository.deleteNoteById(noteId)
