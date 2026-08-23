@@ -6,6 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -20,7 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import com.example.dndnotes.data.model.Category
+import com.example.dndnotes.ui.components.ViewModeToggle
 import com.example.dndnotes.ui.theme.DndTheme
 import com.example.dndnotes.ui.theme.ThemeViewModel
 import androidx.compose.material.icons.filled.Settings
@@ -41,6 +46,7 @@ fun CategoryScreen(
 
     val categories by viewModel.allCategories.collectAsState()
     val rootCategories = categories.filter { it.parentId == null }
+    val categoryGridView by themeViewModel.categoryGridView.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf<Category?>(null) }
@@ -57,6 +63,10 @@ fun CategoryScreen(
                     }
                 },
                 actions = {
+                    ViewModeToggle(
+                        isGridView = categoryGridView,
+                        onToggle = themeViewModel::setCategoryGridView
+                    )
                     IconButton(onClick = { showThemeDialog = true }) {
                         Icon(Icons.Default.Settings, contentDescription = "Themes")
                     }
@@ -72,6 +82,23 @@ fun CategoryScreen(
         if (categories.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text("No categories yet. Tap + to add one!", style = MaterialTheme.typography.bodyLarge)
+            }
+        } else if (categoryGridView) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                gridItems(categories, key = { it.id }) { category ->
+                    CompactCategoryCard(
+                        category = category,
+                        onClick = { onCategoryClick(category.id) }
+                    )
+                }
             }
         } else {
             LazyColumn(
@@ -357,6 +384,49 @@ fun CategoryTreeItem(
                     depth = depth + 1
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun CompactCategoryCard(
+    category: Category,
+    onClick: () -> Unit
+) {
+    val color = try {
+        Color(android.graphics.Color.parseColor(category.color))
+    } catch (e: Exception) {
+        Color.Gray
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.small,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(color = color, shape = MaterialTheme.shapes.small)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = category.name,
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }

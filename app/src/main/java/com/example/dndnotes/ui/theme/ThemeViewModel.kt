@@ -26,4 +26,22 @@ class ThemeViewModel(private val themePreferences: ThemePreferences) : ViewModel
             themePreferences.saveBackgroundImage(uri)
         }
     }
+
+    val categoryGridView: StateFlow<Boolean> = themePreferences.categoryGridViewFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val noteGridView: StateFlow<Boolean> = themePreferences.noteGridViewFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun setCategoryGridView(gridView: Boolean) {
+        viewModelScope.launch {
+            themePreferences.saveCategoryGridView(gridView)
+        }
+    }
+
+    fun setNoteGridView(gridView: Boolean) {
+        viewModelScope.launch {
+            themePreferences.saveNoteGridView(gridView)
+        }
+    }
 }

@@ -69,7 +69,8 @@ fun DndNavGraph(
                 viewModel = noteViewModel,
                 onNoteClick = { noteId ->
                     navController.navigate(Screen.NoteEditor.createRoute(noteId))
-                }
+                },
+                themeViewModel = themeViewModel
             )
         }
         composable(

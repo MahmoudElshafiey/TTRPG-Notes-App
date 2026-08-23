@@ -7,6 +7,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -21,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.dndnotes.data.model.NoteSummary
+import com.example.dndnotes.ui.components.ViewModeToggle
+import com.example.dndnotes.ui.theme.ThemeViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -29,20 +34,30 @@ import java.util.*
 fun NoteListScreen(
     categoryId: Long,
     viewModel: NoteViewModel,
-    onNoteClick: (Long) -> Unit
+    onNoteClick: (Long) -> Unit,
+    themeViewModel: ThemeViewModel
 ) {
     LaunchedEffect(categoryId) {
         viewModel.setCategory(categoryId)
     }
 
     val notes by viewModel.notes.collectAsState()
+    val noteGridView by themeViewModel.noteGridView.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var noteToDelete by remember { mutableStateOf<NoteSummary?>(null) }
 
     Scaffold(
         containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(title = { Text("Notes") })
+            TopAppBar(
+                title = { Text("Notes") },
+                actions = {
+                    ViewModeToggle(
+                        isGridView = noteGridView,
+                        onToggle = themeViewModel::setNoteGridView
+                    )
+                }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
@@ -53,6 +68,23 @@ fun NoteListScreen(
         if (notes.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text("No notes in this category yet. Tap + to add one!")
+            }
+        } else if (noteGridView) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                gridItems(notes, key = { it.id }) { note ->
+                    CompactNoteCard(
+                        note = note,
+                        onClick = { onNoteClick(note.id) }
+                    )
+                }
             }
         } else {
             LazyColumn(
@@ -236,6 +268,44 @@ fun NoteItem(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun CompactNoteCard(
+    note: NoteSummary,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                            Color.Transparent
+                        )
+                    )
+                )
+                .padding(16.dp)
+        ) {
+            Text(
+                text = note.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
