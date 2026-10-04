@@ -43,6 +43,7 @@ fun CampaignScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         topBar = {
             TopAppBar(
                 title = { Text("Select Campaign") },

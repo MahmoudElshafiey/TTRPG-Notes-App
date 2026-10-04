@@ -45,6 +45,7 @@ fun CategoryScreen(
     }
 
     val categories by viewModel.allCategories.collectAsState()
+    val deletionNoteCount by viewModel.deletionNoteCount.collectAsState()
     val rootCategories = categories.filter { it.parentId == null }
     val categoryGridView by themeViewModel.categoryGridView.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
@@ -54,6 +55,7 @@ fun CategoryScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         topBar = {
             TopAppBar(
                 title = { Text("D&D Notes") },
@@ -159,15 +161,43 @@ fun CategoryScreen(
         }
 
         categoryToDelete?.let { category ->
+            // Resolve the cascade size while the dialog is open.
+            LaunchedEffect(category.id) {
+                viewModel.loadNoteCountForDeletion(category)
+            }
             AlertDialog(
-                onDismissRequest = { categoryToDelete = null },
+                onDismissRequest = { categoryToDelete = null; viewModel.clearDeletionNoteCount() },
                 title = { Text("Delete Category") },
-                text = { Text("Are you sure you want to delete '${category.name}'? This will also delete all subcategories and notes within it.") },
+                text = {
+                    val noteCount = deletionNoteCount
+                    Column {
+                        Text("Are you sure you want to delete '${category.name}'? This will also delete all subcategories and notes within it.")
+                        // Spell out the blast radius: a cascade can take dozens of notes
+                        // with it, and that is not obvious from the category name.
+                        if (noteCount != null && noteCount > 0) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = if (noteCount == 1) {
+                                    "This will permanently destroy 1 note."
+                                } else {
+                                    "This will permanently destroy $noteCount notes."
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                text = "A recent automatic backup may still contain them.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                },
                 confirmButton = {
                     Button(
                         onClick = {
                             viewModel.deleteCategory(category)
                             categoryToDelete = null
+                            viewModel.clearDeletionNoteCount()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) {
@@ -175,7 +205,10 @@ fun CategoryScreen(
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { categoryToDelete = null }) {
+                    TextButton(onClick = {
+                        categoryToDelete = null
+                        viewModel.clearDeletionNoteCount()
+                    }) {
                         Text("Cancel")
                     }
                 }

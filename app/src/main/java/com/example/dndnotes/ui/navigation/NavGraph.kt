@@ -20,8 +20,10 @@ fun DndNavGraph(
     consumablesViewModel: ConsumablesViewModel,
     themeViewModel: ThemeViewModel,
     importExportViewModel: ImportExportViewModel,
+    backupViewModel: BackupViewModel,
     onCreateDocument: (String, (Uri?) -> Unit) -> Unit,
     onOpenDocument: ((Uri?) -> Unit) -> Unit,
+    onChooseBackupFolder: () -> Unit,
     startDestination: String = Screen.CampaignList.route
 ) {
     NavHost(
@@ -91,6 +93,8 @@ fun DndNavGraph(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 themeViewModel = themeViewModel,
+                backupViewModel = backupViewModel,
+                onChooseBackupFolder = onChooseBackupFolder,
                 onBack = { navController.popBackStack() }
             )
         }

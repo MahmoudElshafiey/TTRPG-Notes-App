@@ -65,4 +65,35 @@ interface NoteDao {
 
     @Query("SELECT * FROM notes WHERE title LIKE '%' || :query || '%' OR body LIKE '%' || :query || '%'")
     fun searchNotes(query: String): Flow<List<Note>>
+
+    // Delete helpers, used by the REPLACE-mode restore.
+
+    @Query("DELETE FROM images")
+    suspend fun deleteAllImages()
+
+    @Query("DELETE FROM consumables")
+    suspend fun deleteAllConsumables()
+
+    @Query("DELETE FROM notes")
+    suspend fun deleteAllNotes()
+
+    /**
+     * Counts the notes a category deletion would take with it. Deleting a category
+     * cascades to its subcategories and every note inside them, so the confirmation
+     * dialog needs the real number to warn the user.
+     */
+    @Query(
+        """
+        WITH RECURSIVE subtree(id) AS (
+            SELECT id FROM categories WHERE id = :categoryId
+            UNION ALL
+            SELECT c.id FROM categories c INNER JOIN subtree s ON c.parentId = s.id
+        )
+        SELECT COUNT(*) FROM notes WHERE categoryId IN (SELECT id FROM subtree)
+        """
+    )
+    suspend fun getSubtreeNoteCount(categoryId: Long): Int
+
+    @Query("SELECT COUNT(*) FROM notes WHERE categoryId = :categoryId")
+    suspend fun getNoteCountForCategory(categoryId: Long): Int
 }

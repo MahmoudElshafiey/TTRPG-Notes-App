@@ -17,6 +17,10 @@ class CategoryViewModel(private val repository: DndRepository) : ViewModel() {
         else flowOf(emptyList())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /** Note count for the pending delete confirmation; null while not confirming. */
+    private val _deletionNoteCount = MutableStateFlow<Int?>(null)
+    val deletionNoteCount: StateFlow<Int?> = _deletionNoteCount.asStateFlow()
+
     fun setCampaign(campaignId: Long) {
         _currentCampaignId.value = campaignId
     }
@@ -46,5 +50,20 @@ class CategoryViewModel(private val repository: DndRepository) : ViewModel() {
         viewModelScope.launch {
             repository.deleteCategory(category)
         }
+    }
+
+    /**
+     * Loads how many notes (including those in subcategories) deleting [category] would
+     * destroy. Deleting a category cascades, so the confirmation dialog states the real
+     * cost rather than just naming the category.
+     */
+    fun loadNoteCountForDeletion(category: Category) {
+        viewModelScope.launch {
+            _deletionNoteCount.value = repository.getSubtreeNoteCount(category.id)
+        }
+    }
+
+    fun clearDeletionNoteCount() {
+        _deletionNoteCount.value = null
     }
 }

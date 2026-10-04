@@ -29,4 +29,8 @@ interface CategoryDao {
 
     @Query("DELETE FROM categories WHERE id = :categoryId")
     suspend fun deleteCategoryById(categoryId: Long)
+
+    /** Used by the REPLACE-mode restore, which empties the whole table at once. */
+    @Query("DELETE FROM categories")
+    suspend fun deleteAllCategories()
 }

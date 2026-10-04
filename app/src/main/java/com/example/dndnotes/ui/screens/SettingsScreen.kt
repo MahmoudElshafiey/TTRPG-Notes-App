@@ -3,7 +3,10 @@ package com.example.dndnotes.ui.screens
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -29,14 +32,25 @@ import java.io.File
 @Composable
 fun SettingsScreen(
     themeViewModel: ThemeViewModel,
+    backupViewModel: BackupViewModel,
+    onChooseBackupFolder: () -> Unit,
     onBack: () -> Unit
 ) {
     val currentTheme by themeViewModel.currentTheme.collectAsState()
     val backgroundUri by themeViewModel.backgroundImageUri.collectAsState()
+    val backupState by backupViewModel.uiState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
     var showThemeDialog by remember { mutableStateOf(false) }
+
+    // One-shot result from a manual backup or a restore.
+    LaunchedEffect(backupState.message) {
+        backupState.message?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            backupViewModel.consumeMessage()
+        }
+    }
 
     val backgroundLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -78,6 +92,7 @@ fun SettingsScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         topBar = {
             TopAppBar(
                 title = { Text("Settings") },
@@ -93,6 +108,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -163,6 +179,13 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            HorizontalDivider()
+
+            AutomaticBackupsSection(
+                viewModel = backupViewModel,
+                onChooseFolder = onChooseBackupFolder
+            )
         }
     }
 

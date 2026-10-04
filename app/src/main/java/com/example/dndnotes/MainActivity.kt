@@ -27,6 +27,7 @@ import com.example.dndnotes.ui.screens.CategoryViewModel
 import com.example.dndnotes.ui.screens.ConsumablesViewModel
 import com.example.dndnotes.ui.screens.ImagesViewModel
 import com.example.dndnotes.ui.screens.NoteViewModel
+import com.example.dndnotes.ui.screens.BackupViewModel
 import com.example.dndnotes.ui.components.BackgroundImage
 import com.example.dndnotes.ui.theme.DndNotesTheme
 import com.example.dndnotes.ui.theme.DndTheme
@@ -34,10 +35,19 @@ import com.example.dndnotes.ui.theme.ThemeViewModel
 import androidx.compose.runtime.getValue
 
 class MainActivity : ComponentActivity() {
-    private val repository by lazy { (application as DndApplication).repository }
-    private val themePrefs by lazy { (application as DndApplication).themePreferences }
-    private val factory by lazy { ViewModelFactory(repository, themePrefs) }
-    
+    private val dndApplication by lazy { application as DndApplication }
+    private val repository by lazy { dndApplication.repository }
+    private val factory by lazy {
+        ViewModelFactory(
+            application = dndApplication,
+            repository = repository,
+            themePreferences = dndApplication.themePreferences,
+            backupPreferences = dndApplication.backupPreferences,
+            backupManager = dndApplication.backupManager,
+            backupFileStore = dndApplication.backupFileStore
+        )
+    }
+
     private val categoryViewModel: CategoryViewModel by viewModels { factory }
     private val campaignViewModel: CampaignViewModel by viewModels { factory }
     private val noteViewModel: NoteViewModel by viewModels { factory }
@@ -45,6 +55,7 @@ class MainActivity : ComponentActivity() {
     private val consumablesViewModel: ConsumablesViewModel by viewModels { factory }
     private val themeViewModel: ThemeViewModel by viewModels { factory }
     private val importExportViewModel: ImportExportViewModel by viewModels { factory }
+    private val backupViewModel: BackupViewModel by viewModels { factory }
 
     private var onFileSelected: ((android.net.Uri?) -> Unit)? = null
 
@@ -54,6 +65,16 @@ class MainActivity : ComponentActivity() {
 
     private val openDocumentLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         onFileSelected?.invoke(uri)
+    }
+
+    /**
+     * Lets the user pick the folder automatic backups are written to. The grant is taken
+     * for good by BackupViewModel, so this only has to run once per folder choice.
+     */
+    private val pickBackupFolderLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        backupViewModel.onFolderSelected(uri)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,6 +97,12 @@ class MainActivity : ComponentActivity() {
                         uriString = backgroundUri,
                         modifier = Modifier.fillMaxSize()
                     )
+                    // Flush the pending "unsaved changes" flag so it survives the process
+                    // being killed while the app sits in the background.
+                    DisposableEffect(Unit) {
+                        onDispose { dndApplication.onEnteredBackground() }
+                    }
+
                     val scrimAlpha = if (backgroundUri != null) 0.55f else 1f
                     Box(
                         modifier = Modifier
@@ -84,7 +111,11 @@ class MainActivity : ComponentActivity() {
                     )
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = Color.Transparent
+                        color = Color.Transparent,
+                        // A transparent Surface would resolve its content color to
+                        // Unspecified and let LocalContentColor fall back to black, so the
+                        // theme's text color is pinned here explicitly.
+                        contentColor = MaterialTheme.colorScheme.onBackground
                     ) {
                         val navController = rememberNavController()
                         DndNavGraph(
@@ -96,6 +127,7 @@ class MainActivity : ComponentActivity() {
                             consumablesViewModel = consumablesViewModel,
                             themeViewModel = themeViewModel,
                             importExportViewModel = importExportViewModel,
+                            backupViewModel = backupViewModel,
                             onCreateDocument = { fileName, callback ->
                                 onFileSelected = callback
                                 createDocumentLauncher.launch(fileName)
@@ -103,6 +135,9 @@ class MainActivity : ComponentActivity() {
                             onOpenDocument = { callback ->
                                 onFileSelected = callback
                                 openDocumentLauncher.launch(arrayOf("application/json"))
+                            },
+                            onChooseBackupFolder = {
+                                pickBackupFolderLauncher.launch(null)
                             }
                         )
                     }

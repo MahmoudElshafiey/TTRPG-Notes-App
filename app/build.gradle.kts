@@ -35,6 +35,11 @@ android {
     }
 }
 
+ksp {
+    // Commit the Room schemas so future migrations can be diffed and tested.
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -60,11 +65,16 @@ dependencies {
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 
+    // WorkManager - drives the scheduled automatic backups
+    implementation(libs.androidx.work.runtime.ktx)
+
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+    // MigrationTestHelper, used to prove the 2->4 upgrade preserves data.
+    androidTestImplementation(libs.androidx.room.testing)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

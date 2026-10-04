@@ -47,6 +47,7 @@ fun NoteEditorScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         topBar = {
             TopAppBar(
                 title = { Text(note?.title ?: "Edit Note") }

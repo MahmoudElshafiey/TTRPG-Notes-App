@@ -23,4 +23,8 @@ interface CampaignDao {
 
     @Delete
     suspend fun deleteCampaign(campaign: Campaign)
+
+    /** Used by the REPLACE-mode restore, which empties the whole table at once. */
+    @Query("DELETE FROM campaigns")
+    suspend fun deleteAllCampaigns()
 }
